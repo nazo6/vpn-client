@@ -3,7 +3,9 @@
 
 export type Procedures = {
     queries: 
-        { key: "app.getAppName", input: never, result: string },
+        { key: "app.getAppInfo", input: never, result: AppInfo },
     mutations: never,
     subscriptions: never
 };
+
+export type AppInfo = { version: string }

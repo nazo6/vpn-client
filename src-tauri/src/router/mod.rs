@@ -6,11 +6,11 @@ pub type Router = rspc::Router;
 pub(crate) type RouterBuilder = rspc::RouterBuilder;
 
 pub(crate) fn mount() -> Arc<Router> {
-    let config = rspc::Config::new().set_ts_bindings_header("/* eslint-disable */"); // ①
+    let config = rspc::Config::new().set_ts_bindings_header("/* eslint-disable */");
 
     let config = config.export_ts_bindings(
         std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../frontend/src/rspc/bindings.ts"), // ②
+            .join("../frontend/src/rspc/bindings.ts"),
     );
 
     <Router>::new()

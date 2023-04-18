@@ -13,11 +13,11 @@ const queryClient = new QueryClient();
 const rspc = createSolidQueryHooks<Procedures>();
 
 function SomeComponent() {
-  const msg = rspc.createQuery(() => ['app.getAppName']);
+  const msg = rspc.createQuery(() => ['app.getAppInfo']);
 
   return (
     <>
-      <p>{msg.data}</p>
+      <p>{msg.data?.version}</p>
     </>
   );
 }

@@ -8,4 +8,4 @@ export type Procedures = {
     subscriptions: never
 };
 
-export type AppInfo = { version: string }
+export type AppInfo = { name: string; version: string }

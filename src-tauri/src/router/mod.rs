@@ -1,11 +1,16 @@
 use std::sync::Arc;
 
+use rspc::Router;
+
+use crate::AppContext;
+
 mod app;
+mod config;
+mod vpn;
 
-pub type Router = rspc::Router;
-pub(crate) type RouterBuilder = rspc::RouterBuilder;
+type RouterBuilder = rspc::RouterBuilder<AppContext>;
 
-pub(crate) fn mount() -> Arc<Router> {
+pub(crate) fn mount() -> Arc<Router<AppContext>> {
     let config = rspc::Config::new().set_ts_bindings_header("/* eslint-disable */");
 
     let config = config.export_ts_bindings(
@@ -13,9 +18,11 @@ pub(crate) fn mount() -> Arc<Router> {
             .join("../frontend/src/rspc/bindings.ts"),
     );
 
-    <Router>::new()
+    Router::<AppContext>::new()
         .config(config)
-        .merge("app.", app::mount()) // ③
+        .merge("app.", app::mount())
+        .merge("config.", config::mount())
+        .merge("vpn.", vpn::mount())
         .build()
         .arced()
 }

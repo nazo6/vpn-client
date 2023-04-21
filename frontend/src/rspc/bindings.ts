@@ -3,9 +3,31 @@
 
 export type Procedures = {
     queries: 
-        { key: "app.getAppInfo", input: never, result: AppInfo },
-    mutations: never,
-    subscriptions: never
+        { key: "app.getAppInfo", input: never, result: AppInfo } | 
+        { key: "config.getConfig", input: never, result: Config },
+    mutations: 
+        { key: "config.setAppConfig", input: AppConfig, result: null } | 
+        { key: "config.setVpnConfig", input: VpnConfig[], result: null } | 
+        { key: "vpn.start", input: number, result: null } | 
+        { key: "vpn.stop", input: never, result: null },
+    subscriptions: 
+        { key: "app.connectionStatus", input: never, result: Status }
 };
 
+export type AppConfig = { proxy: ProxyConfig; vpn_global: GlobalVpnConfig; auto_start: AutoStartConfig }
+
+export type Config = { app: AppConfig; vpn: VpnConfig[] }
+
+export type VpnConfig = { Id: string; Interface: VpnInterface }
+
 export type AppInfo = { name: string; version: string }
+
+export type ProxyConfig = { enabled: boolean; proxy_port: number }
+
+export type VpnInterface = { private_key: string; address: string; DNS: string | null; MTU: string | null }
+
+export type GlobalVpnConfig = { dns: string | null; allowed_ips: string | null; disallowed_ips: string | null; allowed_apps: string | null; disallowed_apps: string | null }
+
+export type AutoStartConfig = { app: boolean; vpn: string | null; hide_window: boolean }
+
+export type Status = "Disconnected" | "Connected" | "Connecting" | "Disconnecting"

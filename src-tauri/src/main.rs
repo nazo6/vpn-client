@@ -1,59 +1,98 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
-use std::sync::{Arc, Mutex};
+use directories::ProjectDirs;
+use once_cell::sync::Lazy;
+use tauri::{
+    CustomMenuItem, Manager, SystemTray, SystemTrayEvent, SystemTrayMenu, SystemTrayMenuItem,
+};
 
-use rspc::Type;
-use serde::{Deserialize, Serialize};
+use config::Config;
+use vpn_manager::VpnManager;
 
+mod config;
 mod router;
+mod vpn_manager;
 
-#[derive(Type, Serialize, Deserialize)]
-pub struct AppConfig {
-    proxy: Arc<Mutex<ProxyConfig>>,
-    vpn_global: Arc<Mutex<GlobalVpnConfig>>,
+pub(crate) struct AppContext {
+    config: Arc<Mutex<Config>>,
+    vpn_manager: Arc<VpnManager>,
 }
 
-#[derive(Type, Serialize, Deserialize)]
-pub struct GlobalVpnConfig {
-    dns: Option<String>,
-    allowed_ips: Option<String>,
-    disallowed_ips: Option<String>,
-    allowed_apps: Option<String>,
-    disallowed_apps: Option<String>,
-}
-
-#[derive(Type, Serialize, Deserialize)]
-pub struct ProxyConfig {
-    enabled: bool,
-    proxy_port: u16,
-}
-
-pub struct AppContext {
-    config: AppConfig,
-}
+pub(crate) static PROJECT_DIRS: Lazy<ProjectDirs> =
+    Lazy::new(|| ProjectDirs::from("dev", "nazo6", "vpn-client").unwrap());
 
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt::init();
 
-    tauri::Builder::default()
-        .plugin(rspc::integrations::tauri::plugin(router::mount(), || {
-            AppContext {
-                config: AppConfig {
-                    proxy: Arc::new(Mutex::new(ProxyConfig {
-                        enabled: false,
-                        proxy_port: 1008,
-                    })),
-                    vpn_global: Arc::new(Mutex::new(GlobalVpnConfig {
-                        dns: None,
-                        allowed_ips: None,
-                        disallowed_ips: None,
-                        allowed_apps: None,
-                        disallowed_apps: None,
-                    })),
-                },
+    let config_str = tokio::fs::read_to_string(PROJECT_DIRS.config_dir()).await;
+
+    let initial_config = match &config_str {
+        Ok(config_str) => match ron::from_str(config_str) {
+            Ok(config) => config,
+            Err(err) => {
+                tracing::error!("Failed to parse config file: {}", err);
+                Config::default()
             }
-        }))
+        },
+        Err(err) => {
+            tracing::error!("Failed to read config file: {}", err);
+            Config::default()
+        }
+    };
+    let vpn_manager = VpnManager::new();
+
+    let initial_config_1 = Arc::new(Mutex::new(initial_config));
+    let initial_config_2 = initial_config_1.clone();
+    let vpn_manager_1 = Arc::new(vpn_manager);
+    let vpn_manager_2 = vpn_manager_1.clone();
+
+    let tray_menu = SystemTrayMenu::new()
+        .add_item(CustomMenuItem::new("toggle_win".to_string(), "Show/Hide"))
+        .add_native_item(SystemTrayMenuItem::Separator)
+        .add_item(CustomMenuItem::new("quit".to_string(), "Quit"));
+
+    tauri::Builder::default()
+        .plugin(rspc::integrations::tauri::plugin(
+            router::mount(),
+            move || AppContext {
+                config: initial_config_1.clone(),
+                vpn_manager: vpn_manager_1.clone(),
+            },
+        ))
+        .system_tray(SystemTray::new().with_menu(tray_menu))
+        .on_system_tray_event(|app, event| {
+            if let SystemTrayEvent::MenuItemClick { id, .. } = event {
+                match id.as_str() {
+                    "quit" => {
+                        std::process::exit(0);
+                    }
+                    "toggle_win" => {
+                        let window = app.get_window("main").unwrap();
+                        if window.is_visible().unwrap() {
+                            window.hide().unwrap();
+                        } else {
+                            window.show().unwrap()
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        })
+        .setup(|_| {
+            tauri::async_runtime::spawn(async move {
+                let config = initial_config_2.lock().await;
+                let vpn_manager = vpn_manager_2.clone();
+                if let Some(id) = &config.app.auto_start.vpn {
+                    let config = config.vpn.iter().find(|v| v.id == *id).unwrap();
+                    vpn_manager.start(config).await.unwrap();
+                }
+            });
+
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

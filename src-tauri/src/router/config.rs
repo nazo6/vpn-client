@@ -1,35 +1,20 @@
-use rspc::Type;
-use serde::Serialize;
-
-use crate::{GlobalVpnConfig, ProxyConfig};
+use crate::config::{AppConfig, VpnConfig};
 
 use super::RouterBuilder;
 
-#[derive(Type, Serialize)]
-pub struct VpnConfig {
-    name: String,
-    private_key: String,
-    dns: Option<String>,
-    preshare_key: Option<String>,
-    allowed_ips: Option<String>,
-    disallowed_ips: Option<String>,
-    endpoint: String,
-    public_key: String,
-    allowed_apps: Option<String>,
-    disallowed_apps: Option<String>,
-}
-
 pub(crate) fn mount() -> RouterBuilder {
     <RouterBuilder>::new()
-        .query("getAppConfig", |t| t(|ctx, _: ()| ctx.config))
-        .mutation("setGlobalVpnConfig", |t| {
-            t(|ctx, config: GlobalVpnConfig| async move {
-                *ctx.config.vpn_global.lock().unwrap() = config;
+        .query("getConfig", |t| {
+            t(|ctx, _: ()| async move { ctx.config.lock().await.clone() })
+        })
+        .mutation("setAppConfig", |t| {
+            t(|ctx, config: AppConfig| async move {
+                ctx.config.lock().await.app = config;
             })
         })
-        .mutation("setProxyConfig", |t| {
-            t(|ctx, config: ProxyConfig| async move {
-                *ctx.config.proxy.lock().unwrap() = config;
+        .mutation("setVpnConfig", |t| {
+            t(|ctx, config: Vec<VpnConfig>| async move {
+                ctx.config.lock().await.vpn = config;
             })
         })
 }

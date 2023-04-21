@@ -1,3 +1,4 @@
+use futures_async_stream::stream;
 use rspc::Type;
 use serde::Serialize;
 
@@ -13,14 +14,27 @@ pub(crate) fn mount() -> RouterBuilder {
     RouterBuilder::new()
         .query("getAppInfo", |t| {
             t(|_, _: ()| AppInfo {
-                version: env!("cargo_pkg_version"),
+                version: env!("CARGO_PKG_VERSION"),
                 name: env!("CARGO_PKG_NAME"),
             })
         })
         .subscription("connectionStatus", |t| {
             t(|ctx, _: ()| {
-                async_stream::stream! {
+                #[stream]
+                async move {
                     let mut rx = ctx.vpn_manager.get_status_receiver();
+                    while rx.changed().await.is_ok() {
+                        let v = (*rx.borrow()).clone();
+                        yield v;
+                    }
+                }
+            })
+        })
+        .subscription("vpnLog", |t| {
+            t(|ctx, _: ()| {
+                #[stream]
+                async move {
+                    let mut rx = ctx.vpn_manager.get_log_receiver();
                     while rx.changed().await.is_ok() {
                         let v = (*rx.borrow()).clone();
                         yield v;

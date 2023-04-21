@@ -8,26 +8,29 @@ export type Procedures = {
     mutations: 
         { key: "config.setAppConfig", input: AppConfig, result: null } | 
         { key: "config.setVpnConfig", input: VpnConfig[], result: null } | 
-        { key: "vpn.start", input: number, result: null } | 
+        { key: "vpn.start", input: string, result: null } | 
         { key: "vpn.stop", input: never, result: null },
     subscriptions: 
-        { key: "app.connectionStatus", input: never, result: Status }
+        { key: "app.connectionStatus", input: never, result: Status } | 
+        { key: "app.vpnLog", input: never, result: string }
 };
 
 export type AppConfig = { proxy: ProxyConfig; vpn_global: GlobalVpnConfig; auto_start: AutoStartConfig }
 
-export type Config = { app: AppConfig; vpn: VpnConfig[] }
-
-export type VpnConfig = { Id: string; Interface: VpnInterface }
-
 export type AppInfo = { name: string; version: string }
-
-export type ProxyConfig = { enabled: boolean; proxy_port: number }
-
-export type VpnInterface = { private_key: string; address: string; DNS: string | null; MTU: string | null }
-
-export type GlobalVpnConfig = { dns: string | null; allowed_ips: string | null; disallowed_ips: string | null; allowed_apps: string | null; disallowed_apps: string | null }
 
 export type AutoStartConfig = { app: boolean; vpn: string | null; hide_window: boolean }
 
+export type ProxyConfig = { enabled: boolean; proxy_port: number }
+
+export type VpnConfig = { Id: string; Interface: VpnInterface; Peer: VpnPeer }
+
+export type Config = { app: AppConfig; vpn: VpnConfig[] }
+
+export type VpnInterface = { PrivateKey: string; Address: string; DNS: string | null; MTU: string | null }
+
 export type Status = "Disconnected" | "Connected" | "Connecting" | "Disconnecting"
+
+export type VpnPeer = { PublicKey: string; AllowedIPs: string | null; Endpoint: string; PresharedKey: string | null; AllowedApps: string | null; DisallowedApps: string | null; DisallowedIPs: string | null }
+
+export type GlobalVpnConfig = { dns: string | null; allowed_ips: string | null; disallowed_ips: string | null; allowed_apps: string | null; disallowed_apps: string | null }

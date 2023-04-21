@@ -1,3 +1,4 @@
+#![feature(generators, proc_macro_hygiene, stmt_expr_attributes)]
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -27,7 +28,7 @@ pub(crate) static PROJECT_DIRS: Lazy<ProjectDirs> =
 async fn main() {
     tracing_subscriber::fmt::init();
 
-    let config_str = tokio::fs::read_to_string(PROJECT_DIRS.config_dir()).await;
+    let config_str = tokio::fs::read_to_string(PROJECT_DIRS.config_dir().join("config.ron")).await;
 
     let initial_config = match &config_str {
         Ok(config_str) => match ron::from_str(config_str) {
@@ -87,7 +88,7 @@ async fn main() {
                 let vpn_manager = vpn_manager_2.clone();
                 if let Some(id) = &config.app.auto_start.vpn {
                     let config = config.vpn.iter().find(|v| v.id == *id).unwrap();
-                    vpn_manager.start(config).await.unwrap();
+                    vpn_manager.start(config).await;
                 }
             });
 

@@ -1,7 +1,6 @@
 import { IconSun, IconMoonStars } from '@tabler/icons-react';
 import {
   AppShell,
-  Header,
   Group,
   ActionIcon,
   useMantineColorScheme,

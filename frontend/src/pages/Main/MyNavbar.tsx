@@ -6,22 +6,16 @@ import {
   Navbar,
   ScrollArea,
 } from '@mantine/core';
-import {
-  useActivePage,
-  useSetActivePage,
-  useSetVpnConfig,
-  useVpnConfig,
-} from '../../appContext';
 import { IconPlus } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
+import { useAtom } from 'jotai';
 import { VpnEditor } from '../../components/VpnEditor';
 import { rspc } from '../../hooks';
+import { vpnConfigAtom, activePageAtom } from '../../atoms';
 
 export function MyNavBar() {
-  const vpnConfig = useVpnConfig();
-  const setVpnConfig = useSetVpnConfig();
-  const activePage = useActivePage();
-  const setActivePage = useSetActivePage();
+  const [vpnConfig, setVpnConfig] = useAtom(vpnConfigAtom);
+  const [activePage, setActivePage] = useAtom(activePageAtom);
 
   const [opened, { open, close }] = useDisclosure(false);
 

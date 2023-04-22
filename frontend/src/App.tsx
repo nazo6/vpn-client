@@ -1,7 +1,7 @@
 import { QueryClient } from '@tanstack/react-query';
 import { createClient } from '@rspc/client';
 import { TauriTransport } from '@rspc/tauri';
-
+import { useHydrateAtoms } from 'jotai/utils';
 import type { Procedures } from './rspc/bindings';
 import { rspc, useColorSchemeCustom } from './hooks';
 import { Main } from './pages/Main';
@@ -10,7 +10,7 @@ import {
   MantineProvider,
   createEmotionCache,
 } from '@mantine/core';
-import { AppProvider } from './AppProvider';
+import { appConfigAtom, vpnConfigAtom } from './atoms';
 
 const client = createClient<Procedures>({
   transport: new TauriTransport(),
@@ -45,20 +45,30 @@ function Providers() {
         }}
       >
         {config.data ? (
-          <AppProvider
-            initialValues={{
-              appConfig: config.data.app,
-              vpnConfig: config.data.vpn,
-            }}
+          <HydrateAtoms
+            initialValues={[
+              [appConfigAtom, config.data.app],
+              [vpnConfigAtom, config.data.vpn],
+            ]}
           >
             <Main />
-          </AppProvider>
+          </HydrateAtoms>
         ) : (
           <></>
         )}
       </MantineProvider>
     </ColorSchemeProvider>
   );
+}
+function HydrateAtoms({
+  initialValues,
+  children,
+}: {
+  initialValues: any;
+  children: React.ReactNode;
+}) {
+  useHydrateAtoms(initialValues);
+  return <>{children}</>;
 }
 
 export default App;

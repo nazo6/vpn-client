@@ -24,10 +24,10 @@ export function Home() {
         </Button>
       </Group>
       <ScrollArea>
-        {log.map((logEntry) => {
+        {log.map((logEntry, i) => {
           if ('VpnLog' in logEntry) {
             return (
-              <div className="flex flex-row gap-1">
+              <div className="flex flex-row gap-1" key={i}>
                 <LevelBadge level={logEntry.VpnLog.level} />
                 <Badge variant="light">{logEntry.VpnLog.vpn_id}</Badge>
                 {logEntry.VpnLog.message}
@@ -35,7 +35,7 @@ export function Home() {
             );
           } else {
             return (
-              <div className="flex flex-row gap-1">
+              <div className="flex flex-row gap-1" key={i}>
                 <LevelBadge level={logEntry.AppLog.level} />
                 {logEntry.AppLog.message}
               </div>

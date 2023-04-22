@@ -45,14 +45,6 @@
     "updater": {
       "active": false
     },
-    "windows": [
-      {
-        "fullscreen": false,
-        "resizable": true,
-        "title": "vpn-client",
-        "width": 800,
-        "height": 600
-      }
-    ]
+    "windows": []
   }
 }

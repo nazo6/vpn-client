@@ -1,7 +1,10 @@
-use std::process::Stdio;
+use std::{
+    process::Stdio,
+    sync::{Arc, Mutex},
+};
 
 use crate::config::vpn::VpnConfig;
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use futures::prelude::*;
 use rspc::Type;
 use serde::{Deserialize, Serialize};
@@ -9,7 +12,7 @@ use tokio::{
     fs::File,
     io::AsyncWriteExt,
     process::{Child, Command},
-    sync::{broadcast, watch},
+    sync::{broadcast, oneshot, watch},
 };
 use tokio_util::codec::{FramedRead, LinesCodec};
 use tracing::{debug, info, warn};
@@ -23,14 +26,17 @@ pub(crate) enum Status {
 }
 
 pub(crate) struct VpnManager {
-    status_channel: (watch::Sender<Status>, watch::Receiver<Status>),
+    status_sender: Arc<Mutex<watch::Sender<Status>>>,
+    status_receiver: watch::Receiver<Status>,
     killer: (broadcast::Sender<bool>, broadcast::Receiver<bool>),
 }
 
 impl VpnManager {
     pub fn new() -> Self {
+        let (status_sender, status_receiver) = watch::channel(Status::Disconnected);
         Self {
-            status_channel: watch::channel(Status::Disconnected),
+            status_sender: Arc::new(Mutex::new(status_sender)),
+            status_receiver,
             killer: broadcast::channel(1),
         }
     }
@@ -60,62 +66,67 @@ impl VpnManager {
         Ok(child)
     }
     pub async fn start(&self, config: &VpnConfig) -> Result<()> {
-        if *self.status_channel.1.borrow() != Status::Disconnected {
+        if *self.status_receiver.borrow() != Status::Disconnected {
             return Err(anyhow!("Already connected"));
         }
 
         let _ = self
-            .status_channel
-            .0
+            .status_sender
+            .lock()
+            .unwrap()
             .send(Status::Connecting(config.id.clone()));
 
         let child = Self::start_vpn(config).await;
 
-        let Ok(child) = child else {
-            let error = child.unwrap_err();
-            let _ = self.status_channel.0.send(Status::Disconnected);
-            return Err(anyhow!("Cannot create process: {}", error.to_string()));
-        };
+        let Ok(mut child) = child else {
+                    let error = child.unwrap_err();
+                    let _ = self.status_sender.lock().unwrap().send(Status::Disconnected);
+                    return Err(anyhow!("Cannot create process: {}", error.to_string()));
+                };
 
-        let log_task = async {
-            if let Some(stdout) = child.stdout {
+        let stdout = child
+            .stdout
+            .take()
+            .context("child did not have a handle to stdout")?;
+
+        {
+            let config = config.clone();
+            let sender = self.status_sender.clone();
+            let mut kill_receiver = self.killer.0.subscribe();
+            tokio::spawn(async move {
                 let mut stream = FramedRead::new(stdout, LinesCodec::new());
 
-                while let Some(line) = stream.next().await {
-                    let Ok(line) = line else {continue};
+                let log_task = async {
+                    while let Some(line) = stream.next().await {
+                        if let Ok(line) = line {
+                            if line.contains("WireSock Service has started.") {
+                                let _ = sender
+                                    .lock()
+                                    .unwrap()
+                                    .send(Status::Connected(config.id.clone()));
+                            }
 
-                    let id = &config.id;
-                    info!({ vpn_id = id }, "{}", line);
+                            let id = &config.id;
+                            info!({ vpn_id = id }, "{}", line);
+                        };
+                    }
+                };
+                let recv_kill = async {
+                    kill_receiver.recv().await;
+                };
+
+                tokio::select! {
+                    _ = log_task => {}
+                    _ = recv_kill => {
+                        debug!("Received kill signal. Killing process...");
+                        let _ = child.kill().await;
+                    }
+
                 }
-            } else {
-                warn!("No stdout!: {}", &config.id);
-            }
+
+                let _ = sender.lock().unwrap().send(Status::Disconnected);
+            })
         };
-        let kill_wait = async {
-            let mut rx = self.killer.0.subscribe();
-
-            while let Ok(value) = rx.recv().await {
-                if value {
-                    info!("Received kill signal. Stopping...");
-                    break;
-                }
-            }
-        };
-
-        tokio::select! {
-            _ = log_task => {
-                debug!("Log task completed")
-            }
-            _ = kill_wait => {
-                debug!("Got kill signal")
-            }
-        };
-
-        info!("Stopped vpn process.");
-
-        self.killer.0.send(false).unwrap();
-
-        let _ = self.status_channel.0.send(Status::Disconnected);
 
         Ok(())
     }
@@ -126,6 +137,6 @@ impl VpnManager {
     }
 
     pub fn get_status_receiver(&self) -> watch::Receiver<Status> {
-        self.status_channel.1.clone()
+        self.status_receiver.clone()
     }
 }

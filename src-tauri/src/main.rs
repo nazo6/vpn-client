@@ -30,6 +30,8 @@ pub(crate) static PROJECT_DIRS: Lazy<ProjectDirs> =
 
 #[tokio::main]
 async fn main() {
+    // console_subscriber::init();
+
     let (rspc_layer, log_sender) = RspcLayer::new();
     let filter_layer = EnvFilter::try_from_default_env()
         .or_else(|_| EnvFilter::try_new("debug"))
@@ -58,8 +60,8 @@ async fn main() {
     };
     let vpn_manager = VpnManager::new();
 
-    let initial_config_1 = Arc::new(Mutex::new(initial_config));
-    let initial_config_2 = initial_config_1.clone();
+    let initial_config_1 = Arc::new(Mutex::new(initial_config.clone()));
+    let initial_config_2 = Arc::new(initial_config);
     let vpn_manager_1 = Arc::new(vpn_manager);
     let vpn_manager_2 = vpn_manager_1.clone();
     let vpn_manager_3 = vpn_manager_1.clone();
@@ -79,30 +81,46 @@ async fn main() {
             },
         ))
         .system_tray(SystemTray::new().with_menu(tray_menu))
-        .on_system_tray_event(move |app, event| {
-            if let SystemTrayEvent::MenuItemClick { id, .. } = event {
-                match id.as_str() {
-                    "quit" => {
-                        let _ = tokio::runtime::Runtime::new()
-                            .unwrap()
-                            .block_on(async { vpn_manager_3.stop().await });
+        .on_system_tray_event(move |app, event| match event {
+            SystemTrayEvent::MenuItemClick { id, .. } => match id.as_str() {
+                "quit" => {
+                    let vpn_manager = vpn_manager_3.clone();
+                    tauri::async_runtime::spawn(async move {
+                        vpn_manager.stop().await;
                         std::process::exit(0);
+                    });
+                }
+                "toggle_win" => {
+                    let window = app.get_window("main").unwrap();
+                    if window.is_visible().unwrap() {
+                        window.hide().unwrap();
+                    } else {
+                        window.show().unwrap()
                     }
-                    "toggle_win" => {
-                        let window = app.get_window("main").unwrap();
-                        if window.is_visible().unwrap() {
-                            window.hide().unwrap();
-                        } else {
-                            window.show().unwrap()
-                        }
-                    }
-                    _ => {}
+                }
+                _ => {}
+            },
+            SystemTrayEvent::DoubleClick { .. } => {
+                let window = app.get_window("main").unwrap();
+                if window.is_visible().unwrap() {
+                    window.hide().unwrap();
+                } else {
+                    window.show().unwrap()
                 }
             }
+            _ => (),
         })
-        .setup(|_| {
+        .setup(|app| {
+            let config = initial_config_2;
+            let hide_window_on_start =
+                config.app.auto_start.app && config.app.auto_start.hide_window;
+            let _window =
+                tauri::WindowBuilder::new(app, "main", tauri::WindowUrl::App("index.html".into()))
+                    .visible(!hide_window_on_start)
+                    .build()
+                    .unwrap();
+
             tauri::async_runtime::spawn(async move {
-                let config = initial_config_2.lock().await;
                 let vpn_manager = vpn_manager_2.clone();
                 if let Some(id) = &config.app.auto_start.vpn {
                     let config = config.vpn.iter().find(|v| v.id == *id).unwrap();

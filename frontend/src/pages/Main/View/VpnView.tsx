@@ -10,8 +10,13 @@ export function VpnView(props: VpnViewProps) {
     <>
       <div>{props.id}</div>
       <Button
-        onClick={() => {
-          startVpn(props.id);
+        onClick={async () => {
+          try {
+            await startVpn(props.id);
+          } catch (e) {
+            console.log('failed to start vpn');
+            console.log(e);
+          }
         }}
       >
         Start

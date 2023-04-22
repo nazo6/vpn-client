@@ -1,11 +1,4 @@
-import {
-  ActionIcon,
-  Divider,
-  Modal,
-  NavLink,
-  Navbar,
-  ScrollArea,
-} from '@mantine/core';
+import { ActionIcon, Divider, Modal, NavLink, ScrollArea } from '@mantine/core';
 import { IconCircle, IconPlus } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
 import { useAtom, useAtomValue } from 'jotai';
@@ -20,29 +13,31 @@ export function MyNavBar() {
 
   const [opened, { open, close }] = useDisclosure(false);
 
-  const { mutate } = rspc.useMutation('config.setVpnConfig');
+  const { mutateAsync: rspcSetVpnConfig } = rspc.useMutation(
+    'config.setVpnConfig'
+  );
 
   return (
-    <>
+    <div className="p-2">
       <Modal size="70vw" opened={opened} onClose={close} title="Add vpn">
         <VpnEditor
           onSubmit={async (config) => {
-            mutate([...vpnConfig, config]);
+            await rspcSetVpnConfig([...vpnConfig, config]);
             setVpnConfig([...vpnConfig, config]);
           }}
           close={close}
         />
       </Modal>
-      <Navbar p="xs">
-        <Navbar.Section>
+      <div className="flex flex-col">
+        <div>
           <NavLink
             active={activePage.type == 'home'}
             label={'home'}
             onClick={() => setActivePage({ type: 'home' })}
           />
           <Divider my="sm" />
-        </Navbar.Section>
-        <Navbar.Section grow component={ScrollArea} mx="-xs" px="xs">
+        </div>
+        <ScrollArea>
           <div className="w-full flex justify-center mb-2">
             <ActionIcon variant="outline" onClick={open}>
               <IconPlus size="1rem" />
@@ -71,8 +66,8 @@ export function MyNavBar() {
               onClick={() => setActivePage({ type: 'vpn', id: vpn.id })}
             />
           ))}
-        </Navbar.Section>
-      </Navbar>
-    </>
+        </ScrollArea>
+      </div>
+    </div>
   );
 }

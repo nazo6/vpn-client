@@ -1,5 +1,5 @@
 use rspc::{Error, ErrorCode};
-use tracing::{error, info, warn};
+use tracing::{debug, error, info, warn};
 
 use super::RouterBuilder;
 
@@ -35,6 +35,7 @@ pub(crate) fn mount() -> RouterBuilder {
         })
         .mutation("stop", |t| {
             t(|ctx, _: ()| async move {
+                debug!("Stopping vpn");
                 let res = ctx.vpn_manager.stop().await;
                 match res {
                     Ok(_) => {

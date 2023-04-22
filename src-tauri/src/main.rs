@@ -62,6 +62,7 @@ async fn main() {
     let initial_config_2 = initial_config_1.clone();
     let vpn_manager_1 = Arc::new(vpn_manager);
     let vpn_manager_2 = vpn_manager_1.clone();
+    let vpn_manager_3 = vpn_manager_1.clone();
 
     let tray_menu = SystemTrayMenu::new()
         .add_item(CustomMenuItem::new("toggle_win".to_string(), "Show/Hide"))
@@ -78,10 +79,13 @@ async fn main() {
             },
         ))
         .system_tray(SystemTray::new().with_menu(tray_menu))
-        .on_system_tray_event(|app, event| {
+        .on_system_tray_event(move |app, event| {
             if let SystemTrayEvent::MenuItemClick { id, .. } = event {
                 match id.as_str() {
                     "quit" => {
+                        let _ = tokio::runtime::Runtime::new()
+                            .unwrap()
+                            .block_on(async { vpn_manager_3.stop().await });
                         std::process::exit(0);
                     }
                     "toggle_win" => {
@@ -107,6 +111,12 @@ async fn main() {
             });
 
             Ok(())
+        })
+        .on_window_event(|event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event.event() {
+                event.window().hide().unwrap();
+                api.prevent_close();
+            }
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

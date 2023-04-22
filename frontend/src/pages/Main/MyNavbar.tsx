@@ -6,16 +6,17 @@ import {
   Navbar,
   ScrollArea,
 } from '@mantine/core';
-import { IconPlus } from '@tabler/icons-react';
+import { IconCircle, IconPlus } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
-import { useAtom } from 'jotai';
+import { useAtom, useAtomValue } from 'jotai';
 import { VpnEditor } from '../../components/VpnEditor';
 import { rspc } from '../../hooks';
-import { vpnConfigAtom, activePageAtom } from '../../atoms';
+import { vpnConfigAtom, activePageAtom, runningStateAtom } from '../../atoms';
 
 export function MyNavBar() {
   const [vpnConfig, setVpnConfig] = useAtom(vpnConfigAtom);
   const [activePage, setActivePage] = useAtom(activePageAtom);
+  const connectionStatus = useAtomValue(runningStateAtom);
 
   const [opened, { open, close }] = useDisclosure(false);
 
@@ -32,7 +33,7 @@ export function MyNavBar() {
           close={close}
         />
       </Modal>
-      <Navbar p="xs" width={{ base: 300 }}>
+      <Navbar p="xs">
         <Navbar.Section>
           <NavLink
             active={activePage.type == 'home'}
@@ -49,6 +50,21 @@ export function MyNavBar() {
           </div>
           {vpnConfig.map((vpn) => (
             <NavLink
+              icon={
+                <IconCircle
+                  size="1rem"
+                  fill={
+                    'id' in connectionStatus && connectionStatus.id == vpn.id
+                      ? 'green'
+                      : 'red'
+                  }
+                  color={
+                    'id' in connectionStatus && connectionStatus.id == vpn.id
+                      ? 'green'
+                      : 'red'
+                  }
+                />
+              }
               key={vpn.id}
               active={activePage.type == 'vpn' && activePage.id == vpn.id}
               label={vpn.id}

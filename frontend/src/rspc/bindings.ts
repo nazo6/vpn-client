@@ -39,6 +39,6 @@ export type VpnPeer = { public_key: string; allowed_ips: string; endpoint: strin
 
 export type VpnInterface = { private_key: string; address: string; dns: string | null; mtu: string | null }
 
-export type Status = "Disconnected" | "Connected" | "Connecting" | "Disconnecting"
+export type Status = "Disconnected" | { Connected: string } | { Connecting: string } | { Disconnecting: string }
 
 export type GlobalVpnConfig = { dns: string | null; allowed_ips: string | null; disallowed_ips: string | null; allowed_apps: string | null; disallowed_apps: string | null }

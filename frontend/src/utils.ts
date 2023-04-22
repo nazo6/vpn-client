@@ -1,4 +1,4 @@
-import { VpnConfig } from '../rspc/bindings';
+import { Status, VpnConfig } from './rspc/bindings';
 
 const interfaceKeyMap: Record<string, string> = {
   privatekey: 'private_key',
@@ -55,4 +55,26 @@ export function parseWireguardConfig(id: string, str: string): VpnConfig {
   });
 
   return config;
+}
+
+export type ExtractedStatus =
+  | {
+      status: 'Disconnected';
+    }
+  | {
+      status: 'Connecting' | 'Disconnecting' | 'Connected';
+      id: string;
+    };
+export function extractStatus(status: Status): ExtractedStatus {
+  if (status == 'Disconnected') {
+    return { status: 'Disconnected' };
+  } else if ('Connecting' in status) {
+    return { status: 'Connecting', id: status.Connecting };
+  } else if ('Connected' in status) {
+    return { status: 'Connected', id: status.Connected };
+  } else if ('Disconnecting' in status) {
+    return { status: 'Disconnecting', id: status.Disconnecting };
+  } else {
+    throw Error('Unreachable');
+  }
 }

@@ -9,7 +9,7 @@ use tokio::{
     fs::File,
     io::AsyncWriteExt,
     process::{Child, Command},
-    sync::watch,
+    sync::{broadcast, watch},
 };
 use tokio_util::codec::{FramedRead, LinesCodec};
 use tracing::{debug, info, warn};
@@ -17,21 +17,21 @@ use tracing::{debug, info, warn};
 #[derive(Debug, Serialize, Deserialize, Type, Clone, PartialEq)]
 pub(crate) enum Status {
     Disconnected,
-    Connected,
-    Connecting,
-    Disconnecting,
+    Connected(String),
+    Connecting(String),
+    Disconnecting(String),
 }
 
 pub(crate) struct VpnManager {
     status_channel: (watch::Sender<Status>, watch::Receiver<Status>),
-    killer: (watch::Sender<bool>, watch::Receiver<bool>),
+    killer: (broadcast::Sender<bool>, broadcast::Receiver<bool>),
 }
 
 impl VpnManager {
     pub fn new() -> Self {
         Self {
             status_channel: watch::channel(Status::Disconnected),
-            killer: watch::channel(false),
+            killer: broadcast::channel(1),
         }
     }
     async fn start_vpn(config: &VpnConfig) -> Result<Child> {
@@ -64,7 +64,10 @@ impl VpnManager {
             return Err(anyhow!("Already connected"));
         }
 
-        let _ = self.status_channel.0.send(Status::Connecting);
+        let _ = self
+            .status_channel
+            .0
+            .send(Status::Connecting(config.id.clone()));
 
         let child = Self::start_vpn(config).await;
 
@@ -82,18 +85,17 @@ impl VpnManager {
                     let Ok(line) = line else {continue};
 
                     let id = &config.id;
-                    info!({ vpn_id = id }, "log: {}", line);
+                    info!({ vpn_id = id }, "{}", line);
                 }
             } else {
                 warn!("No stdout!: {}", &config.id);
             }
         };
         let kill_wait = async {
-            let mut rx = self.killer.1.clone();
+            let mut rx = self.killer.0.subscribe();
 
-            while rx.changed().await.is_ok() {
-                let v = *rx.borrow();
-                if v {
+            while let Ok(value) = rx.recv().await {
+                if value {
                     info!("Received kill signal. Stopping...");
                     break;
                 }

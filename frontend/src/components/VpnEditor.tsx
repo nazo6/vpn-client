@@ -11,7 +11,7 @@ import {
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { useState } from 'react';
-import { parseWireguardConfig } from '../utils/parseConfig';
+import { parseWireguardConfig } from '../utils';
 
 type VpnEditorProps = {
   initialValue?: VpnConfig;

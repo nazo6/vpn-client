@@ -12,7 +12,7 @@ use tokio::{
     sync::watch,
 };
 use tokio_util::codec::{FramedRead, LinesCodec};
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 #[derive(Debug, Serialize, Deserialize, Type, Clone, PartialEq)]
 pub(crate) enum Status {
@@ -24,7 +24,6 @@ pub(crate) enum Status {
 
 pub(crate) struct VpnManager {
     status_channel: (watch::Sender<Status>, watch::Receiver<Status>),
-    log_channel: (watch::Sender<String>, watch::Receiver<String>),
     killer: (watch::Sender<bool>, watch::Receiver<bool>),
 }
 
@@ -32,7 +31,6 @@ impl VpnManager {
     pub fn new() -> Self {
         Self {
             status_channel: watch::channel(Status::Disconnected),
-            log_channel: watch::channel("".to_string()),
             killer: watch::channel(false),
         }
     }
@@ -41,13 +39,18 @@ impl VpnManager {
         let tmp_conf_path = tmpdir.join("wiresock-client.conf");
         let mut tmp_file = File::create(&tmp_conf_path).await?;
         tmp_file
-            .write_all(serde_ini::to_string(config)?.as_bytes())
+            .write_all(config.to_temp_string().as_bytes())
             .await?;
+
+        debug!(
+            "Starting vpn process. Config path: {}",
+            tmp_conf_path.to_str().unwrap()
+        );
 
         let child = Command::new("wiresock-client.exe")
             .arg("run")
-            .arg("--config")
-            .arg(tmp_conf_path)
+            .arg("-config")
+            .arg(tmp_conf_path.to_str().unwrap())
             .arg("-log-level")
             .arg("debug")
             .stdout(Stdio::piped())
@@ -78,9 +81,11 @@ impl VpnManager {
                 while let Some(line) = stream.next().await {
                     let Ok(line) = line else {continue};
 
-                    info!("log: {}", &line);
-                    self.log_channel.0.send(line).unwrap();
+                    let id = &config.id;
+                    info!({ vpn_id = id }, "log: {}", line);
                 }
+            } else {
+                warn!("No stdout!: {}", &config.id);
             }
         };
         let kill_wait = async {
@@ -89,7 +94,7 @@ impl VpnManager {
             while rx.changed().await.is_ok() {
                 let v = *rx.borrow();
                 if v {
-                    info!("Recieved kill signal. Stopping...");
+                    info!("Received kill signal. Stopping...");
                     break;
                 }
             }
@@ -106,21 +111,19 @@ impl VpnManager {
 
         info!("Stopped vpn process.");
 
-        let _ = self.status_channel.0.send(Status::Disconnected);
-
         self.killer.0.send(false).unwrap();
+
+        let _ = self.status_channel.0.send(Status::Disconnected);
 
         Ok(())
     }
     pub async fn stop(&self) -> Result<()> {
+        debug!("Sending kill signal...");
         self.killer.0.send(true).unwrap();
         Ok(())
     }
 
     pub fn get_status_receiver(&self) -> watch::Receiver<Status> {
         self.status_channel.1.clone()
-    }
-    pub fn get_log_receiver(&self) -> watch::Receiver<String> {
-        self.log_channel.1.clone()
     }
 }

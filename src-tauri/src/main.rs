@@ -1,5 +1,6 @@
 #![feature(generators, proc_macro_hygiene, stmt_expr_attributes)]
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+use rspc_layer::RspcLayer;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
@@ -8,17 +9,20 @@ use once_cell::sync::Lazy;
 use tauri::{
     CustomMenuItem, Manager, SystemTray, SystemTrayEvent, SystemTrayMenu, SystemTrayMenuItem,
 };
+use tracing_subscriber::{filter::EnvFilter, prelude::*};
 
 use config::Config;
 use vpn_manager::VpnManager;
 
 mod config;
 mod router;
+mod rspc_layer;
 mod vpn_manager;
 
 pub(crate) struct AppContext {
     config: Arc<Mutex<Config>>,
     vpn_manager: Arc<VpnManager>,
+    log_receiver: tokio::sync::broadcast::Receiver<rspc_layer::LogEntry>,
 }
 
 pub(crate) static PROJECT_DIRS: Lazy<ProjectDirs> =
@@ -26,7 +30,16 @@ pub(crate) static PROJECT_DIRS: Lazy<ProjectDirs> =
 
 #[tokio::main]
 async fn main() {
-    tracing_subscriber::fmt::init();
+    let (rspc_layer, log_sender) = RspcLayer::new();
+    let filter_layer = EnvFilter::try_from_default_env()
+        .or_else(|_| EnvFilter::try_new("debug"))
+        .unwrap();
+
+    tracing_subscriber::registry()
+        .with(filter_layer)
+        .with(rspc_layer)
+        .with(tracing_subscriber::fmt::layer())
+        .init();
 
     let config_str = tokio::fs::read_to_string(PROJECT_DIRS.config_dir().join("config.ron")).await;
 
@@ -61,6 +74,7 @@ async fn main() {
             move || AppContext {
                 config: initial_config_1.clone(),
                 vpn_manager: vpn_manager_1.clone(),
+                log_receiver: log_sender.subscribe(),
             },
         ))
         .system_tray(SystemTray::new().with_menu(tray_menu))
@@ -88,7 +102,7 @@ async fn main() {
                 let vpn_manager = vpn_manager_2.clone();
                 if let Some(id) = &config.app.auto_start.vpn {
                     let config = config.vpn.iter().find(|v| v.id == *id).unwrap();
-                    vpn_manager.start(config).await;
+                    let _ = vpn_manager.start(config).await;
                 }
             });
 

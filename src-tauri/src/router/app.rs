@@ -30,13 +30,11 @@ pub(crate) fn mount() -> RouterBuilder {
                 }
             })
         })
-        .subscription("vpnLog", |t| {
-            t(|ctx, _: ()| {
+        .subscription("log", |t| {
+            t(|mut ctx, _: ()| {
                 #[stream]
                 async move {
-                    let mut rx = ctx.vpn_manager.get_log_receiver();
-                    while rx.changed().await.is_ok() {
-                        let v = (*rx.borrow()).clone();
+                    while let Ok(v) = ctx.log_receiver.recv().await {
                         yield v;
                     }
                 }

@@ -13,7 +13,7 @@ pub(crate) fn mount() -> RouterBuilder {
                     info!("Starting VPN: {}", vpn_config.id);
                     match ctx.vpn_manager.start(&vpn_config).await {
                         Ok(_) => {
-                            info!("VPN started");
+                            info!("VPN exited");
                             Ok(())
                         }
                         Err(e) => {

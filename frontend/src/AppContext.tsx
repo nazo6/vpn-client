@@ -1,27 +1,33 @@
-import { createContext, useContext } from 'solid-js';
-import { SetStoreFunction, createStore } from 'solid-js/store';
-import { Config } from './rspc/bindings';
+import { Dispatch, SetStateAction, createContext, useContext } from 'react';
+import { AppConfig, VpnConfig } from './rspc/bindings';
 
-type ContextType = {
-  config: Config;
-  setConfig: SetStoreFunction<Config>;
-};
-const AppContext = createContext<ContextType>();
+export const vpnConfigContext = createContext<VpnConfig[]>(undefined!);
+export const setVpnConfigContext = createContext<
+  Dispatch<SetStateAction<VpnConfig[]>>
+>(() => undefined);
 
-type AppProviderType = {
-  config: Config;
-  children: any;
-};
-export function AppProvider(props: AppProviderType) {
-  const [config, setConfig] = createStore(props.config);
-  const store: ContextType = {
-    config,
-    setConfig,
-  };
-  return (
-    <AppContext.Provider value={store}>{props.children}</AppContext.Provider>
-  );
-}
-export function useApp() {
-  return useContext(AppContext);
-}
+export const appConfigContext = createContext<AppConfig>(undefined!);
+export const setAppConfigContext = createContext<
+  Dispatch<SetStateAction<AppConfig>>
+>(() => undefined);
+
+export type ActivePageType =
+  | {
+      type: 'home';
+    }
+  | {
+      type: 'vpn';
+      id: string;
+    };
+export const activePageContext = createContext<ActivePageType>(undefined!);
+export const setActivePageContext = createContext<
+  Dispatch<SetStateAction<ActivePageType>>
+>(() => undefined);
+
+export const useVpnConfig = () => useContext(vpnConfigContext);
+export const useSetVpnConfig = () => useContext(setVpnConfigContext);
+export const useAppConfig = () => useContext(appConfigContext);
+export const useSetAppConfig = () => useContext(setAppConfigContext);
+
+export const useActivePage = () => useContext(activePageContext);
+export const useSetActivePage = () => useContext(setActivePageContext);

@@ -1,63 +1,63 @@
-import { QueryClient } from '@tanstack/solid-query';
+import { QueryClient } from '@tanstack/react-query';
 import { createClient } from '@rspc/client';
 import { TauriTransport } from '@rspc/tauri';
-import { Procedures } from './rspc/bindings';
-import { Menu } from './components/Menu';
-import { For, Match, Switch, createSignal } from 'solid-js';
-import { rspc } from './hooks';
-import { AppProvider } from './AppContext';
-import { AppBar } from './components/AppBar';
+
+import type { Procedures } from './rspc/bindings';
+import { rspc, useColorSchemeCustom } from './hooks';
+import { Main } from './pages/Main';
+import {
+  ColorSchemeProvider,
+  MantineProvider,
+  createEmotionCache,
+} from '@mantine/core';
+import { AppProvider } from './AppProvider';
 
 const client = createClient<Procedures>({
   transport: new TauriTransport(),
 });
-
 const queryClient = new QueryClient();
-
-function Top() {
-  const [selectedVpn, setSelectedVpn] = createSignal<string | null>(null);
-
-  const [logs, setLogs] = createSignal<string[]>([]);
-  const rspcClient = rspc.useContext().client;
-  // @ts-ignore
-  rspcClient.addSubscription(['app.vpnLog'], {
-    onData: (data) => {
-      setLogs((prev) => [...prev, data]);
-    },
-  });
-
-  const configQuery = rspc.createQuery(() => ['config.getConfig']);
-
-  return (
-    <div class="h-full">
-      <Switch>
-        <Match when={configQuery.data}>
-          {(config) => (
-            <AppProvider config={config()}>
-              <div class="h-full flex flex-col">
-                <AppBar />
-                <div class="flex flex-row min-h-0 h-full w-full">
-                  <Menu
-                    changeSelectedVpn={(id: string) => setSelectedVpn(id)}
-                  />
-                  <div class="w-full">
-                    <For each={logs()}>{(log) => <div>{log}</div>}</For>
-                  </div>
-                </div>
-              </div>
-            </AppProvider>
-          )}
-        </Match>
-      </Switch>
-    </div>
-  );
-}
 
 function App() {
   return (
     <rspc.Provider client={client} queryClient={queryClient}>
-      <Top />
+      <Providers />
     </rspc.Provider>
+  );
+}
+
+const appendCache = createEmotionCache({ key: 'mantine', prepend: false });
+
+function Providers() {
+  const [colorScheme, toggleColorScheme] = useColorSchemeCustom();
+
+  const config = rspc.useQuery(['config.getConfig']);
+  return (
+    <ColorSchemeProvider
+      colorScheme={colorScheme}
+      toggleColorScheme={toggleColorScheme}
+    >
+      <MantineProvider
+        emotionCache={appendCache}
+        withGlobalStyles
+        withNormalizeCSS
+        theme={{
+          colorScheme: colorScheme,
+        }}
+      >
+        {config.data ? (
+          <AppProvider
+            initialValues={{
+              appConfig: config.data.app,
+              vpnConfig: config.data.vpn,
+            }}
+          >
+            <Main />
+          </AppProvider>
+        ) : (
+          <></>
+        )}
+      </MantineProvider>
+    </ColorSchemeProvider>
   );
 }
 

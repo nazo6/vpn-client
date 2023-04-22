@@ -12,7 +12,7 @@ export type Procedures = {
         { key: "vpn.stop", input: never, result: null },
     subscriptions: 
         { key: "app.connectionStatus", input: never, result: Status } | 
-        { key: "app.vpnLog", input: never, result: string }
+        { key: "app.log", input: never, result: LogEntry }
 };
 
 export type AppConfig = { proxy: ProxyConfig; vpn_global: GlobalVpnConfig; auto_start: AutoStartConfig }
@@ -21,16 +21,24 @@ export type AppInfo = { name: string; version: string }
 
 export type AutoStartConfig = { app: boolean; vpn: string | null; hide_window: boolean }
 
+export type LogEntry = { VpnLog: VpnLog } | { AppLog: AppLog }
+
+export type Level = "Trace" | "Debug" | "Info" | "Warn" | "Error"
+
 export type ProxyConfig = { enabled: boolean; proxy_port: number }
 
-export type VpnConfig = { Id: string; Interface: VpnInterface; Peer: VpnPeer }
+export type VpnConfig = { id: string; interface: VpnInterface; peer: VpnPeer }
+
+export type AppLog = { level: Level; message: string }
+
+export type VpnLog = { level: Level; vpn_id: string; message: string }
 
 export type Config = { app: AppConfig; vpn: VpnConfig[] }
 
-export type VpnInterface = { PrivateKey: string; Address: string; DNS: string | null; MTU: string | null }
+export type VpnPeer = { public_key: string; allowed_ips: string; endpoint: string; preshared_key: string | null; allowed_apps: string | null; disallowed_apps: string | null; disallowed_ips: string | null }
+
+export type VpnInterface = { private_key: string; address: string; dns: string | null; mtu: string | null }
 
 export type Status = "Disconnected" | "Connected" | "Connecting" | "Disconnecting"
-
-export type VpnPeer = { PublicKey: string; AllowedIPs: string | null; Endpoint: string; PresharedKey: string | null; AllowedApps: string | null; DisallowedApps: string | null; DisallowedIPs: string | null }
 
 export type GlobalVpnConfig = { dns: string | null; allowed_ips: string | null; disallowed_ips: string | null; allowed_apps: string | null; disallowed_apps: string | null }

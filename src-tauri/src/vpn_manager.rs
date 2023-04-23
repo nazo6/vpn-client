@@ -5,6 +5,7 @@ use std::{
 
 use crate::config::vpn::VpnConfig;
 use anyhow::{anyhow, Context, Result};
+use command_group::AsyncCommandGroup;
 use futures::prelude::*;
 use rspc::Type;
 use serde::{Deserialize, Serialize};
@@ -12,10 +13,10 @@ use tokio::{
     fs::File,
     io::AsyncWriteExt,
     process::{Child, Command},
-    sync::{broadcast, oneshot, watch},
+    sync::{broadcast, watch},
 };
 use tokio_util::codec::{FramedRead, LinesCodec};
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 
 #[derive(Debug, Serialize, Deserialize, Type, Clone, PartialEq)]
 pub(crate) enum Status {
@@ -61,7 +62,8 @@ impl VpnManager {
             .arg("debug")
             .stdout(Stdio::piped())
             .kill_on_drop(true)
-            .spawn()?;
+            .group_spawn()?
+            .into_inner();
 
         Ok(child)
     }

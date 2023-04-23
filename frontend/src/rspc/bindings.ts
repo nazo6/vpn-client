@@ -31,9 +31,9 @@ export type VpnLog = { level: Level; vpn_id: string; message: string }
 
 export type Config = { app: AppConfig; vpn: VpnConfig[] }
 
-export type AppLog = { level: Level; message: string }
-
 export type Status = "Disconnected" | { Connected: string } | { Connecting: string } | { Disconnecting: string }
+
+export type AppLog = { level: Level; message: string }
 
 export type AppInfo = { name: string; version: string }
 

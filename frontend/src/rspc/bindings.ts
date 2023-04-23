@@ -17,25 +17,25 @@ export type Procedures = {
 
 export type AppConfig = { proxy: ProxyConfig; vpn_global: GlobalVpnConfig; auto_start: AutoStartConfig }
 
-export type AppInfo = { name: string; version: string }
-
 export type AutoStartConfig = { app: boolean; vpn: string | null; hide_window: boolean }
-
-export type LogEntry = { VpnLog: VpnLog } | { AppLog: AppLog }
-
-export type Level = "Trace" | "Debug" | "Info" | "Warn" | "Error"
 
 export type ProxyConfig = { enabled: boolean; proxy_port: number }
 
 export type VpnConfig = { id: string; interface: VpnInterface; peer: VpnPeer }
 
-export type AppLog = { level: Level; message: string }
+export type LogEntry = { VpnLog: VpnLog } | { AppLog: AppLog }
+
+export type Level = "Trace" | "Debug" | "Info" | "Warn" | "Error"
 
 export type VpnLog = { level: Level; vpn_id: string; message: string }
 
 export type Config = { app: AppConfig; vpn: VpnConfig[] }
 
+export type AppLog = { level: Level; message: string }
+
 export type Status = "Disconnected" | { Connected: string } | { Connecting: string } | { Disconnecting: string }
+
+export type AppInfo = { name: string; version: string }
 
 export type VpnPeer = { public_key: string; allowed_ips: string; endpoint: string; preshared_key: string | null; allowed_apps: string | null; disallowed_apps: string | null; disallowed_ips: string | null }
 

@@ -1,8 +1,10 @@
+use auto_launch::AutoLaunchBuilder;
 use ron::ser::to_string_pretty;
 use tokio::{
     fs::{create_dir_all, File},
     io::AsyncWriteExt,
 };
+use tracing::info;
 
 use crate::{
     config::{app::AppConfig, vpn::VpnConfig},
@@ -19,6 +21,25 @@ pub(crate) fn mount() -> RouterBuilder {
         })
         .mutation("setAppConfig", |t| {
             t(|ctx, config: AppConfig| async move {
+                let auto = AutoLaunchBuilder::new()
+                    .set_app_name("vpn-client")
+                    .set_app_path(std::env::current_exe().unwrap().to_str().unwrap())
+                    .set_use_launch_agent(true)
+                    .build()
+                    .unwrap();
+
+                if config.auto_start.app {
+                    if !auto.is_enabled().unwrap() {
+                        info!("Enabling auto start");
+                        auto.enable().unwrap();
+                    }
+                } else {
+                    if auto.is_enabled().unwrap() {
+                        info!("Disabling auto start");
+                        auto.disable().unwrap();
+                    }
+                }
+
                 ctx.config.lock().await.app = config;
                 write_config(ctx).await
             })

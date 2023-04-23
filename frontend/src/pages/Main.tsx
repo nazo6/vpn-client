@@ -1,12 +1,5 @@
 import { IconSun, IconMoonStars, IconSettings } from '@tabler/icons-react';
-import {
-  AppShell,
-  Group,
-  ActionIcon,
-  useMantineColorScheme,
-  Footer,
-  Modal,
-} from '@mantine/core';
+import { Group, ActionIcon, useMantineColorScheme, Modal } from '@mantine/core';
 import { MyNavBar } from './Main/MyNavbar';
 import { View } from './Main/View';
 import { useSetAtom } from 'jotai';
@@ -38,7 +31,12 @@ export function Main() {
 
   return (
     <>
-      <Modal size="70vw" opened={opened} onClose={close} title="Add vpn">
+      <Modal
+        size="70vw"
+        opened={opened}
+        onClose={close}
+        title="Global settings"
+      >
         <SettingsEditor close={close} />
       </Modal>
       <div className="flex flex-col h-full">

@@ -33,25 +33,13 @@ export function SettingsEditor(props: SettingsEditorProps) {
     try {
       await rspcSetAppConfig(config);
       setAppConfig(config);
+      props.close();
     } catch (e) {
       notifications.show({ message: 'Failed to add vpn!', color: 'red' });
     } finally {
       setLoading(false);
     }
   };
-
-  const Grid = (props: { children: React.ReactNode }) => (
-    <SimpleGrid
-      cols={3}
-      spacing="lg"
-      breakpoints={[
-        { maxWidth: 'md', cols: 2, spacing: 'md' },
-        { maxWidth: 'sm', cols: 1, spacing: 'sm' },
-      ]}
-    >
-      {props.children}
-    </SimpleGrid>
-  );
 
   return (
     <form
@@ -60,16 +48,6 @@ export function SettingsEditor(props: SettingsEditorProps) {
       })}
     >
       <p className="text-xl mb-2">Proxy</p>
-      <Grid>
-        <Checkbox
-          label="Enabled"
-          {...form.getInputProps('proxy.enabled', { type: 'checkbox' })}
-        />
-        <TextInput label="Port" {...form.getInputProps('proxy.proxy_port')} />
-      </Grid>
-
-      <Divider my="sm" />
-      <p className="text-xl mb-2">Peer</p>
       <SimpleGrid
         cols={3}
         spacing="lg"
@@ -78,39 +56,38 @@ export function SettingsEditor(props: SettingsEditorProps) {
           { maxWidth: 'sm', cols: 1, spacing: 'sm' },
         ]}
       >
-        <TextInput
-          withAsterisk
-          required
-          label="Public Key"
-          {...form.getInputProps('peer.public_key')}
+        <Checkbox
+          label="Enabled"
+          {...form.getInputProps('proxy.enabled', { type: 'checkbox' })}
         />
-        <TextInput
-          withAsterisk
-          required
-          label="Endpoint"
-          {...form.getInputProps('peer.endpoint')}
+        <TextInput label="Port" {...form.getInputProps('proxy.proxy_port')} />
+      </SimpleGrid>
+
+      <Divider my="sm" />
+      <p className="text-xl mb-2">Auto start</p>
+      <SimpleGrid
+        cols={3}
+        spacing="lg"
+        breakpoints={[
+          { maxWidth: 'md', cols: 2, spacing: 'md' },
+          { maxWidth: 'sm', cols: 1, spacing: 'sm' },
+        ]}
+      >
+        <Checkbox
+          label="Start app on windows startup"
+          {...form.getInputProps('auto_start.app', { type: 'checkbox' })}
         />
-        <TextInput
-          withAsterisk
-          required
-          label="Allowed IPs"
-          {...form.getInputProps('peer.allowed_ips')}
+
+        <Checkbox
+          label="Hide window when app starts"
+          {...form.getInputProps('auto_start.hide_window', {
+            type: 'checkbox',
+          })}
         />
+
         <TextInput
-          label="Disallowed IPs"
-          {...form.getInputProps('peer.disallowed_ips')}
-        />
-        <TextInput
-          label="Preshared Key"
-          {...form.getInputProps('peer.preshared_key')}
-        />
-        <TextInput
-          label="Allowed Apps"
-          {...form.getInputProps('peer.allowed_apps')}
-        />
-        <TextInput
-          label="Disallowed Apps"
-          {...form.getInputProps('peer.disallowed_apps')}
+          label="VPN id to auto start"
+          {...form.getInputProps('auto_start.vpn')}
         />
       </SimpleGrid>
 
@@ -119,7 +96,7 @@ export function SettingsEditor(props: SettingsEditorProps) {
           Cancel
         </Button>
         <Button variant="filled" disabled={loading} type="submit">
-          {loading ? <Loader size="sm" /> : 'Add'}
+          {loading ? <Loader size="sm" /> : 'Apply'}
         </Button>
       </Group>
     </form>

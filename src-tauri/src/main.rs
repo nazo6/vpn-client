@@ -1,8 +1,8 @@
-#![feature(generators, proc_macro_hygiene, stmt_expr_attributes)]
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 use rspc_layer::RspcLayer;
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use tracing::{info, warn};
 
 use directories::ProjectDirs;
 use once_cell::sync::Lazy;
@@ -22,7 +22,7 @@ mod vpn_manager;
 pub(crate) struct AppContext {
     config: Arc<Mutex<Config>>,
     vpn_manager: Arc<VpnManager>,
-    log_receiver: tokio::sync::broadcast::Receiver<rspc_layer::LogEntry>,
+    log_receiver: async_channel::Receiver<rspc_layer::LogEntry>,
 }
 
 pub(crate) static PROJECT_DIRS: Lazy<ProjectDirs> =
@@ -32,7 +32,7 @@ pub(crate) static PROJECT_DIRS: Lazy<ProjectDirs> =
 async fn main() {
     // console_subscriber::init();
 
-    let (rspc_layer, log_sender) = RspcLayer::new();
+    let (rspc_layer, log_receiver) = RspcLayer::new();
     let filter_layer = EnvFilter::try_from_default_env()
         .or_else(|_| EnvFilter::try_new("debug"))
         .unwrap();
@@ -77,7 +77,7 @@ async fn main() {
             move || AppContext {
                 config: initial_config_1.clone(),
                 vpn_manager: vpn_manager_1.clone(),
-                log_receiver: log_sender.subscribe(),
+                log_receiver: log_receiver.clone(),
             },
         ))
         .system_tray(SystemTray::new().with_menu(tray_menu))
@@ -123,8 +123,13 @@ async fn main() {
             tauri::async_runtime::spawn(async move {
                 let vpn_manager = vpn_manager_2.clone();
                 if let Some(id) = &config.app.auto_start.vpn {
-                    let config = config.vpn.iter().find(|v| v.id == *id).unwrap();
-                    let _ = vpn_manager.start(config).await;
+                    let config = config.vpn.iter().find(|v| v.id == *id);
+                    if let Some(config) = config {
+                        info!("Auto start vpn: {}", id);
+                        let _ = vpn_manager.start(config).await;
+                    } else {
+                        warn!("Auto start vpn not found: {}", id);
+                    }
                 }
             });
 

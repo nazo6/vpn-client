@@ -1,6 +1,5 @@
 use rspc::Type;
 use serde::Serialize;
-use tokio::sync::broadcast;
 use tracing::field::{Field, Visit};
 use tracing_subscriber::Layer;
 
@@ -42,18 +41,13 @@ impl From<tracing::Level> for Level {
 }
 
 pub(crate) struct RspcLayer {
-    pub sender: broadcast::Sender<LogEntry>,
+    pub sender: async_channel::Sender<LogEntry>,
 }
 
 impl RspcLayer {
-    pub fn new() -> (Self, broadcast::Sender<LogEntry>) {
-        let (sender, _) = broadcast::channel(16);
-        (
-            Self {
-                sender: sender.clone(),
-            },
-            sender,
-        )
+    pub fn new() -> (Self, async_channel::Receiver<LogEntry>) {
+        let (sender, receiver) = async_channel::bounded(16);
+        (Self { sender }, receiver)
     }
 }
 
@@ -83,7 +77,7 @@ where
 
         event.record(&mut log);
 
-        let _ = self.sender.send(log);
+        let _ = self.sender.send_blocking(log);
     }
 }
 

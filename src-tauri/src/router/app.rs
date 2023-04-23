@@ -1,6 +1,7 @@
-use futures_async_stream::stream;
+use async_stream::stream;
 use rspc::Type;
 use serde::Serialize;
+use tracing::debug;
 
 use super::RouterBuilder;
 
@@ -20,8 +21,7 @@ pub(crate) fn mount() -> RouterBuilder {
         })
         .subscription("connectionStatus", |t| {
             t(|ctx, _: ()| {
-                #[stream]
-                async move {
+                stream! {
                     let mut rx = ctx.vpn_manager.get_status_receiver();
                     while rx.changed().await.is_ok() {
                         let v = (*rx.borrow()).clone();
@@ -31,9 +31,9 @@ pub(crate) fn mount() -> RouterBuilder {
             })
         })
         .subscription("log", |t| {
-            t(|mut ctx, _: ()| {
-                #[stream]
-                async move {
+            t(|ctx, _: ()| {
+                debug!("Subscribing to log");
+                stream! {
                     while let Ok(v) = ctx.log_receiver.recv().await {
                         yield v;
                     }

@@ -26,9 +26,11 @@ ron = "0.8"
 once_cell = "1.17.1"
 anyhow = "1.0.70"
 futures = "0.3"
-futures-async-stream = "0.2.6"
+async-stream = "0.3"
 console-subscriber = "0.1"
 tokio-process-stream = "0.4"
+auto-launch = "0.4"
+async-channel = "1"
 
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem

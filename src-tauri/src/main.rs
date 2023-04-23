@@ -1,4 +1,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
 use rspc_layer::RspcLayer;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -80,6 +81,7 @@ async fn main() {
                 log_receiver: log_receiver.clone(),
             },
         ))
+        .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {}))
         .system_tray(SystemTray::new().with_menu(tray_menu))
         .on_system_tray_event(move |app, event| match event {
             SystemTrayEvent::MenuItemClick { id, .. } => match id.as_str() {

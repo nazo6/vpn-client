@@ -62,7 +62,9 @@ impl VpnManager {
             .arg("debug")
             .stdout(Stdio::piped())
             .kill_on_drop(true)
-            .group_spawn()?
+            .group()
+            .creation_flags(0x08000000)
+            .spawn()?
             .into_inner();
 
         Ok(child)

@@ -1,4 +1,4 @@
-import { Badge, Button, Group, ScrollArea } from '@mantine/core';
+import { Badge, Group, ScrollArea } from '@mantine/core';
 import { useAtomValue } from 'jotai';
 import { logAtom, runningStateAtom } from '../../../atoms';
 import { Level } from '../../../rspc/bindings';

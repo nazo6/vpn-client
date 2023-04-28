@@ -20,24 +20,26 @@ type VpnEditorProps = {
 };
 export function VpnEditor(props: VpnEditorProps) {
   const form = useForm({
-    initialValues: {
-      id: '',
-      interface: {
-        private_key: '',
-        address: '',
-        dns: '',
-        mtu: '',
-      },
-      peer: {
-        public_key: '',
-        endpoint: '',
-        allowed_ips: '',
-        disallowed_ips: '',
-        preshared_key: '',
-        allowed_apps: '',
-        disallowed_apps: '',
-      },
-    } as VpnConfig,
+    initialValues:
+      props.initialValue ??
+      ({
+        id: '',
+        interface: {
+          private_key: '',
+          address: '',
+          dns: '',
+          mtu: '',
+        },
+        peer: {
+          public_key: '',
+          endpoint: '',
+          allowed_ips: '',
+          disallowed_ips: '',
+          preshared_key: '',
+          allowed_apps: '',
+          disallowed_apps: '',
+        },
+      } as VpnConfig),
   });
 
   const [loading, setLoading] = useState(false);

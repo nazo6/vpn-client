@@ -1,12 +1,10 @@
 import { Badge, Button, Group, ScrollArea } from '@mantine/core';
-import { rspc } from '../../../hooks';
 import { useAtomValue } from 'jotai';
 import { logAtom, runningStateAtom } from '../../../atoms';
 import { Level } from '../../../rspc/bindings';
+import { StopVpnButton } from '../../../components/StopVpnButton';
 
 export function Home() {
-  const { mutateAsync: stopVpn } = rspc.useMutation('vpn.stop');
-
   const runningState = useAtomValue(runningStateAtom);
   const log = useAtomValue(logAtom);
 
@@ -15,13 +13,7 @@ export function Home() {
       <Group>
         {runningState.status}
         {'id' in runningState ? ': ' + runningState.id : ''}
-        <Button
-          onClick={async () => {
-            await stopVpn(undefined);
-          }}
-        >
-          Stop
-        </Button>
+        <StopVpnButton />
       </Group>
       <ScrollArea>
         {log.map((logEntry, i) => {

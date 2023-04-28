@@ -41,6 +41,7 @@ export function parseWireguardConfig(id: string, str: string): VpnConfig {
     const matches = line.match(/(?<key>.+?) ?= ?(?<value>.+)/);
     if (matches?.groups) {
       const key = matches.groups['key'].toLowerCase();
+      const value = matches.groups['value'];
       if (key && value) {
         if (key in interfaceKeyMap) {
           // @ts-expect-error this is fine

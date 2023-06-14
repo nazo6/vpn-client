@@ -1,9 +1,9 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use rspc_layer::RspcLayer;
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 use tokio::sync::Mutex;
-use tracing::{info, warn};
+use tracing::{error, info, warn};
 
 use directories::ProjectDirs;
 use once_cell::sync::Lazy;
@@ -128,7 +128,14 @@ async fn main() {
                     let config = config.vpn.iter().find(|v| v.id == *id);
                     if let Some(config) = config {
                         info!("Auto start vpn: {}", id);
-                        let _ = vpn_manager.start(config).await;
+                        loop {
+                            let res = vpn_manager.start(config).await;
+                            if res.is_ok() {
+                                break;
+                            }
+                            error!("Auto start vpn failed: {}. Retrying in 5 seconds...", id);
+                            tokio::time::sleep(Duration::from_secs(5)).await;
+                        }
                     } else {
                         warn!("Auto start vpn not found: {}", id);
                     }
